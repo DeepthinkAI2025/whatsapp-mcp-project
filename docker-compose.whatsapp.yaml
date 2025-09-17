@@ -31,5 +31,23 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
 
+  whatsapp-web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    container_name: whatsapp_web_ui
+    ports:
+      - "9000:9000"
+    environment:
+      - MCP_SERVER_URL=http://whatsapp-mcp-server:8000
+      - BRIDGE_SERVER_URL=http://whatsapp-bridge:3000
+      - WEB_UI_PORT=9000
+    volumes:
+      - ./web-ui:/app
+    depends_on:
+      - whatsapp-mcp-server
+      - whatsapp-bridge
+    restart: unless-stopped
+
 volumes:
   whatsapp_bridge_data:

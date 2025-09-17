@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp MCP Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .status-icon {
+            font-size: 1.5rem;
+        }
+
+        .status-connected { color: #22c55e; }
+        .status-disconnected { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qr-container {
+            text-align: center;
+        }
+
+        .qr-code {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .qr-status {
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .qr-waiting {
+            background-color: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+
+        .qr-connected {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .qr-error {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+
+        .chat-container {
+            height: 400px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message-sent {
+            background-color: #dcf8c6;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message-received {
+            background-color: white;
+            margin-right: auto;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-success {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #16a34a;
+        }
+
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .log-container {
+            grid-column: 1 / -1;
+        }
+
+        .log-messages {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-time {
+            color: #9ca3af;
+            min-width: 100px;
+        }
+
+        .log-info { color: #60a5fa; }
+        .log-success { color: #34d399; }
+        .log-warning { color: #fbbf24; }
+        .log-error { color: #f87171; }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-success {
+            border-left: 4px solid #22c55e;
+        }
+
+        .notification-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        #phoneNumber {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fab fa-whatsapp"></i> WhatsApp MCP Dashboard</h1>
+            <p>Verwalte deine WhatsApp-Integration über eine benutzerfreundliche Web-Oberfläche</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <i class="fas fa-server status-icon" id="mcpStatusIcon"></i>
+                <div>
+                    <div><strong>MCP Server</strong></div>
+                    <div id="mcpStatus">Überprüfung...</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <i class="fas fa-link status-icon" id="bridgeStatusIcon"></i>
+                <div>
+                    <div><strong>WhatsApp Bridge</strong></div>
+                    <div id="bridgeStatus">Überprüfung...</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <i class="fas fa-users status-icon status-connected"></i>
+                <div>
+                    <div><strong>Verbundene Clients</strong></div>
+                    <div id="clientCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2><i class="fas fa-qrcode"></i> WhatsApp Verbindung</h2>
+                <div class="qr-container">
+                    <div id="qrStatus" class="qr-status qr-waiting">
+                        <i class="fas fa-spinner loading"></i> Lade QR-Code...
+                    </div>
+                    <div id="qrCodeContainer" style="display: none;">
+                        <img id="qrCode" class="qr-code" alt="QR Code" />
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-primary" onclick="refreshQR()">
+                            <i class="fas fa-sync-alt"></i> QR aktualisieren
+                        </button>
+                        <button class="btn btn-warning" onclick="restartBridge()">
+                            <i class="fas fa-restart"></i> Bridge neustarten
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-comments"></i> Chat Interface</h2>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message message-received">
+                            <div>Willkommen im WhatsApp MCP Chat!</div>
+                            <div class="message-time">Jetzt</div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <div class="input-group">
+                            <input type="text" id="phoneNumber" class="form-input" placeholder="Telefonnummer (z.B. 4917646744835@c.us)" />
+                            <input type="text" id="messageInput" class="form-input" placeholder="Nachricht eingeben..." />
+                            <button class="btn btn-success" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i> Senden
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card log-container">
+            <h2><i class="fas fa-terminal"></i> System Logs</h2>
+            <div class="log-messages" id="logMessages">
+                <div class="log-entry">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-info">[INFO]</span>
+                    <span>Dashboard gestartet</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let messages = [];
+
+        // Socket Event Listeners
+        socket.on('connect', () => {
+            addLog('info', 'Mit Server verbunden');
+            updateStatus();
+        });
+
+        socket.on('disconnect', () => {
+            addLog('error', 'Verbindung zum Server verloren');
+        });
+
+        socket.on('qr_code', (qrDataURL) => {
+            showQRCode(qrDataURL);
+        });
+
+        socket.on('qr_update', (qrDataURL) => {
+            showQRCode(qrDataURL);
+        });
+
+        socket.on('connection_status', (data) => {
+            updateConnectionStatus(data.status);
+            addLog('info', `WhatsApp Status: ${data.status}`);
+        });
+
+        socket.on('message_sent', (data) => {
+            addMessage({
+                text: data.message,
+                from: 'self',
+                to: data.to,
+                timestamp: data.timestamp
+            });
+            addLog('success', `Nachricht gesendet an ${data.to}`);
+        });
+
+        socket.on('system_message', (data) => {
+            addLog(data.type, data.message);
+        });
+
+        socket.on('error', (error) => {
+            addLog('error', error);
+            showNotification('Fehler: ' + error, 'error');
+        });
+
+        // Functions
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // MCP Status
+                const mcpIcon = document.getElementById('mcpStatusIcon');
+                const mcpStatus = document.getElementById('mcpStatus');
+                if (data.mcp && data.mcp.online) {
+                    mcpIcon.className = 'fas fa-server status-icon status-connected';
+                    mcpStatus.textContent = 'Online';
+                } else {
+                    mcpIcon.className = 'fas fa-server status-icon status-disconnected';
+                    mcpStatus.textContent = 'Offline';
+                }
+
+                // Bridge Status
+                const bridgeIcon = document.getElementById('bridgeStatusIcon');
+                const bridgeStatus = document.getElementById('bridgeStatus');
+                if (data.bridge && data.bridge.connected) {
+                    bridgeIcon.className = 'fas fa-link status-icon status-connected';
+                    bridgeStatus.textContent = 'Verbunden';
+                } else {
+                    bridgeIcon.className = 'fas fa-link status-icon status-disconnected';
+                    bridgeStatus.textContent = 'Getrennt';
+                }
+
+                // Client Count
+                document.getElementById('clientCount').textContent = data.web_clients || 0;
+
+            } catch (error) {
+                addLog('error', 'Status-Update fehlgeschlagen: ' + error.message);
+            }
+        }
+
+        async function refreshQR() {
+            try {
+                addLog('info', 'QR-Code wird aktualisiert...');
+                const response = await fetch('/api/qr');
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.qr) {
+                        showQRCode(data.qr);
+                    } else if (data.status === 'connected') {
+                        showConnectedStatus();
+                    }
+                } else {
+                    showQRError(data.message);
+                }
+            } catch (error) {
+                showQRError('QR-Code konnte nicht geladen werden');
+                addLog('error', 'QR-Code Fehler: ' + error.message);
+            }
+        }
+
+        function showQRCode(qrDataURL) {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            const qrCode = document.getElementById('qrCode');
+            const qrStatus = document.getElementById('qrStatus');
+            
+            qrCode.src = qrDataURL;
+            qrContainer.style.display = 'block';
+            qrStatus.className = 'qr-status qr-waiting';
+            qrStatus.innerHTML = '<i class="fas fa-mobile-alt"></i> Scanne den QR-Code mit WhatsApp';
+        }
+
+        function showConnectedStatus() {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            const qrStatus = document.getElementById('qrStatus');
+            
+            qrContainer.style.display = 'none';
+            qrStatus.className = 'qr-status qr-connected';
+            qrStatus.innerHTML = '<i class="fas fa-check-circle"></i> WhatsApp erfolgreich verbunden!';
+        }
+
+        function showQRError(message) {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            const qrStatus = document.getElementById('qrStatus');
+            
+            qrContainer.style.display = 'none';
+            qrStatus.className = 'qr-status qr-error';
+            qrStatus.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+        }
+
+        async function sendMessage() {
+            const phoneInput = document.getElementById('phoneNumber');
+            const messageInput = document.getElementById('messageInput');
+            const phone = phoneInput.value.trim();
+            const message = messageInput.value.trim();
+
+            if (!phone || !message) {
+                showNotification('Bitte Telefonnummer und Nachricht eingeben', 'error');
+                return;
+            }
+
+            try {
+                addLog('info', `Sende Nachricht an ${phone}...`);
+                
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: phone,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageInput.value = '';
+                    showNotification('Nachricht erfolgreich gesendet!', 'success');
+                } else {
+                    showNotification('Fehler beim Senden: ' + data.message, 'error');
+                }
+            } catch (error) {
+                addLog('error', 'Senden fehlgeschlagen: ' + error.message);
+                showNotification('Fehler beim Senden der Nachricht', 'error');
+            }
+        }
+
+        function addMessage(msg) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${msg.from === 'self' ? 'message-sent' : 'message-received'}`;
+            
+            const time = new Date(msg.timestamp).toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div>${msg.text}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addLog(type, message) {
+            const logContainer = document.getElementById('logMessages');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            logEntry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-${type}">[${type.toUpperCase()}]</span>
+                <span>${message}</span>
+            `;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        async function restartBridge() {
+            try {
+                addLog('warning', 'Bridge wird neu gestartet...');
+                const response = await fetch('/api/restart-bridge', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Bridge wird neu gestartet', 'success');
+                } else {
+                    showNotification('Fehler beim Neustart', 'error');
+                }
+            } catch (error) {
+                addLog('error', 'Neustart fehlgeschlagen: ' + error.message);
+            }
+        }
+
+        // Enter key support for message input
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('info', 'Dashboard initialisiert');
+            updateStatus();
+            refreshQR();
+            
+            // Update status every 5 seconds
+            setInterval(updateStatus, 5000);
+        });
+    </script>
+</body>
+</html>

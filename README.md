@@ -6,6 +6,7 @@ Ein vollständiges WhatsApp-Integrationssystem mit MCP (Model Context Protocol) 
 
 - **WhatsApp Bridge**: Echte WhatsApp-Integration mit Baileys
 - **MCP Server**: FastAPI-basierter Server für API-Zugriffe
+- **Web Dashboard**: Intuitives Web-Interface mit QR-Code-Display, Chat und System-Monitoring
 - **Automatisierung**: Intelligente Nachrichtenverarbeitung
 - **Docker Support**: Vollständige Containerisierung für einfache Deployment
 - **Externe Integration**: Nahtlose Nutzung mit n8n, Cline und anderen Tools über API-Endpunkte
@@ -49,7 +50,9 @@ Ein vollständiges WhatsApp-Integrationssystem mit MCP (Model Context Protocol) 
 
 3. **Erreichbarkeit sicherstellen**:
    - Verwende die externe IP der VM
-   - Beispiel: `http://YOUR_VM_IP:8000/bridge_status`
+   - **Web Dashboard**: `http://YOUR_VM_IP:9000` (Empfohlen für Benutzer)
+   - **MCP API**: `http://YOUR_VM_IP:8000/bridge_status`
+   - **Bridge API**: `http://YOUR_VM_IP:3000/status`
    - Für HTTPS: Richte einen Load Balancer oder SSL-Zertifikat ein
 
 #### Option 2: Vercel/Railway (Serverless, nur MCP Server)
@@ -83,6 +86,44 @@ cd whatsapp-bridge
 npm install
 node whatsapp-bridge-server.js
 ```
+
+## 🌐 Web Dashboard (Port 9000)
+
+Das Web Dashboard bietet eine benutzerfreundliche Oberfläche zur Verwaltung des WhatsApp MCP Systems.
+
+### Funktionen
+
+- **📱 QR-Code Display**: Automatische Anzeige und Aktualisierung des WhatsApp QR-Codes
+- **💬 Chat Interface**: Direkte Nachrichten-Versendung über die Web-Oberfläche
+- **📊 System Monitoring**: Echtzeit-Status von Bridge, MCP Server und aktiven Verbindungen
+- **📜 Live Logs**: System-Ereignisse und Nachrichten-Status in Echtzeit
+- **🔄 Auto-Refresh**: Automatische Aktualisierung aller Komponenten
+
+### Zugriff
+
+```bash
+# Nach dem Start der Docker Services
+open http://localhost:9000
+
+# Oder auf Cloud VM
+open http://YOUR_VM_IP:9000
+```
+
+### Web UI API-Endpunkte
+
+- `GET /api/status` - System-Status (Bridge, MCP, Web-Clients)
+- `GET /api/qr` - QR-Code für WhatsApp-Verbindung
+- `POST /api/send` - Nachricht senden über Web-Interface
+- `GET /api/messages` - Nachrichten-Verlauf abrufen
+- `POST /api/restart-bridge` - Bridge-Neustart (Admin-Funktion)
+
+### Screenshot/Demo
+
+Das Dashboard zeigt:
+1. **Status-Anzeige**: Verbindungs-Status der verschiedenen Services
+2. **QR-Code-Bereich**: Für neue WhatsApp-Verbindungen
+3. **Chat-Interface**: Telefonnummer eingeben und Nachrichten senden
+4. **System-Logs**: Live-Ereignisse und Fehlermeldungen
 
 ## 📡 API-Endpunkte (Detailliert)
 
@@ -232,19 +273,27 @@ python whatsapp_mcp_ai_demo.py
 
 ```
 whatsapp-mcp-project/
-├── docker-compose.whatsapp.yaml    # Docker Setup
+├── docker-compose.whatsapp.yaml    # Docker Setup (alle Services)
 ├── whatsapp-mcp-server/           # Python MCP Server
 │   ├── main.py
+│   ├── multi_user_main.py         # Multi-Account Support
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── whatsapp-bridge/               # Node.js WhatsApp Bridge
 │   ├── whatsapp-bridge-server.js
 │   ├── package.json
-│   └── Dockerfile
+│   ├── Dockerfile
+│   └── auth_info/                 # WhatsApp Session Data
+├── web-ui/                        # Web Dashboard
+│   ├── server.js                  # Express Server
+│   ├── package.json
+│   ├── Dockerfile
+│   └── public/
+│       └── index.html             # Frontend Interface
 ├── whatsapp_mcp_control.sh        # Control Script
 ├── whatsapp_automation_complete.py # Automatisierung
 ├── whatsapp_mcp_ai_demo.py        # KI-Demo
-└── whatsapp-mcp-config.json       # MCP-Konfiguration
+└── Makefile                       # Build & Deploy Befehle
 ```
 
 ## 🔒 Sicherheit
