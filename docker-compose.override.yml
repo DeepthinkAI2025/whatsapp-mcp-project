@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  whatsapp-mcp-server:
+    environment:
+      - BRIDGE_ONLINE=true
+      - BRIDGE_URL=http://whatsapp-bridge:3000
+    volumes:
+      - ./whatsapp-mcp-server:/app
+    ports:
+      - "8000:8000"
+
+  whatsapp-bridge:
+    volumes:
+      - ./whatsapp-bridge:/app
+      - whatsapp_bridge_data:/app/auth_info
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  whatsapp_bridge_data:

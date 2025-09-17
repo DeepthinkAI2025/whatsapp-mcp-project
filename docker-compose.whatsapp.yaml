@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  whatsapp-mcp-server:
+    build:
+      context: ./whatsapp-mcp-server
+      dockerfile: Dockerfile
+    container_name: whatsapp_mcp_server
+    ports:
+      - "8000:8000"
+    environment:
+      - BRIDGE_ONLINE=true
+      - BRIDGE_URL=http://whatsapp-bridge:3000
+    volumes:
+      - ./whatsapp-mcp-server:/app
+    depends_on:
+      - whatsapp-bridge
+    restart: unless-stopped
+
+  whatsapp-bridge:
+    build:
+      context: ./whatsapp-bridge
+      dockerfile: Dockerfile
+    container_name: whatsapp_bridge
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./whatsapp-bridge:/app
+      - whatsapp_bridge_data:/app/data
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+volumes:
+  whatsapp_bridge_data:
