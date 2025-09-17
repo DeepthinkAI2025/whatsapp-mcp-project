@@ -1,5 +1,4 @@
 import asyncio
-import nest_asyncio
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -7,11 +6,10 @@ from typing import List
 from datetime import datetime
 import os
 
-nest_asyncio.apply()
 app = FastAPI()
 
 # Konfiguration
-BRIDGE_ONLINE = os.getenv("BRIDGE_ONLINE", "false").lower() == "true"
+BRIDGE_ONLINE = os.getenv("BRIDGE_ONLINE", "true").lower() == "true"  # Standard auf true setzen
 BRIDGE_URL = os.getenv("BRIDGE_URL", "http://localhost:3000")
 
 # In-Memory Simulation (für Fallback)
